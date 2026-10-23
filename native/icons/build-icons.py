@@ -3,7 +3,7 @@ from pathlib import Path
 import subprocess
 
 ROOT = Path(__file__).resolve().parent
-for name in ('frame', 'frame-live'):
+for name in ('frame',):
     iconset = ROOT / f'{name}.iconset'
     iconset.mkdir(exist_ok=True)
     for size in (16, 32, 128, 256, 512):

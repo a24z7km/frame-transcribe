@@ -1,13 +1,11 @@
 import AppKit
-import CryptoKit
 import Foundation
 
 // Finder custom icons live in file metadata, so app binaries, bundle signatures,
 // and existing macOS audio-capture permission identities stay unchanged.
 let root = URL(fileURLWithPath: CommandLine.arguments[1])
 let apps = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Applications")
-for (name, icon, executable) in [("Frame 文字起こし.app", "frame", "Frame"),
-                                 ("Frame Live.app", "frame-live", "FrameLive")] {
+for (name, icon, executable) in [("Frame 文字起こし.app", "frame", "Frame")] {
     let target = apps.appendingPathComponent(name)
     let binary = target.appendingPathComponent("Contents/MacOS/\(executable)")
     let info = target.appendingPathComponent("Contents/Info.plist")

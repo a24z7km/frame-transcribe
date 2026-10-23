@@ -1,6 +1,5 @@
-"""Install only the two Frame apps into the user's Applications folder."""
+"""Install this app into the user Applications folder."""
 from pathlib import Path
-import argparse
 import plistlib
 import shutil
 import subprocess
@@ -29,9 +28,4 @@ def install(source, target, identifier):
     print('Installed:', target)
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--live-only', action='store_true', help='Update only Frame Live')
-    options = parser.parse_args()
-    install(ROOT/'native/FrameLive.app', APPLICATIONS/'Frame Live.app', 'local.frame.live')
-    if not options.live_only:
-        install(ROOT/'native/Frame.app', APPLICATIONS/'Frame 文字起こし.app', 'local.frame.desktop-launcher')
+    install(ROOT/'native/Frame.app', APPLICATIONS/'Frame 文字起こし.app', 'local.frame.desktop-launcher')

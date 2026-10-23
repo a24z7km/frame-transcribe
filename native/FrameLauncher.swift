@@ -6,7 +6,6 @@ final class Launcher: NSObject, NSApplicationDelegate {
     var process: Process?
     var project: URL!
     var launchStarted = false
-    var requestedMode = "open"
     let address = URL(string: "http://127.0.0.1:18764")!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -15,14 +14,12 @@ final class Launcher: NSObject, NSApplicationDelegate {
             return
         }
         project = URL(fileURLWithPath: root, isDirectory: true)
-        if CommandLine.arguments.contains("--live") { requestedMode = "live" }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { self.beginLaunch() }
     }
 
     // Accept only the fixed launch command. URL parameters never become paths or commands.
     func application(_ application: NSApplication, open urls: [URL]) {
-        guard let url = urls.first(where: { $0.scheme == "frame-transcribe" && ["open", "live"].contains($0.host ?? "") && ($0.path.isEmpty || $0.path == "/") && $0.query == nil && $0.fragment == nil && $0.user == nil && $0.password == nil && $0.port == nil }) else { return }
-        requestedMode = url.host ?? "open"
+        guard urls.contains(where: { $0.scheme == "frame-transcribe" && $0.host == "open" && ($0.path.isEmpty || $0.path == "/") && $0.query == nil && $0.fragment == nil && $0.user == nil && $0.password == nil && $0.port == nil }) else { return }
         if project != nil { beginLaunch() }
     }
 
@@ -48,17 +45,6 @@ final class Launcher: NSObject, NSApplicationDelegate {
     }
 
     func launch() async {
-        if requestedMode == "live" {
-            let installed = Bundle.main.bundleURL.deletingLastPathComponent().appendingPathComponent("Frame Live.app")
-            let local = project.appendingPathComponent("native/FrameLive.app")
-            let application = FileManager.default.fileExists(atPath: installed.path) ? installed : local
-            guard FileManager.default.fileExists(atPath: application.path), NSWorkspace.shared.open(application) else {
-                fail("Frame Liveが見つかりません。アプリケーションフォルダを確認してください。")
-                return
-            }
-            NSApplication.shared.terminate(nil)
-            return
-        }
         let state = await health()
         if state == 1 { openBrowser(); return }
         if state == -1 {
@@ -68,7 +54,7 @@ final class Launcher: NSObject, NSApplicationDelegate {
         let python = project.appendingPathComponent(".venv/bin/python")
         let server = project.appendingPathComponent("server.py")
         guard FileManager.default.isExecutableFile(atPath: python.path), FileManager.default.fileExists(atPath: server.path) else {
-            fail("Frame本体が見つかりません。元のkoe-memoフォルダは移動せずに残してください。")
+            fail("Frame本体が見つかりません。セットアップしたFrameのフォルダを残し、移動した場合はsetup.commandを実行し直してください。")
             return
         }
         do {
