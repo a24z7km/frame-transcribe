@@ -1,13 +1,12 @@
 'use strict';
 const $ = id => document.getElementById(id);
 let file = null, token = '', busy = false, segments = [], pollTimer, lastState = 'idle';
-let translating = false, translatedSource = '';
+let translating = false, translatedSource = '', ready = false;
 let translationTimer;
 function status(message, error = false) { $('status').textContent = message; $('status').classList.toggle('error', error); }
 function buttons() {
-  $('start').disabled = busy || translating || !file || !token;
-  $('file').disabled = busy || translating;
-  $('model').disabled = busy;
+  $('file').disabled = !ready || busy || translating;
+  $('model').disabled = !ready || busy || translating;
   $('cancel').hidden = !busy || lastState === 'uploading';
   $('result').readOnly = busy || translating;
   $('japanese').readOnly = translating;
@@ -24,18 +23,19 @@ function buttons() {
   const words = $('result').value.trim().match(/\S+/g) || [];
   $('word-count').textContent = words.length ? `${words.length.toLocaleString()}語` : '';
 }
-function selectFile(selected) {
-  if (busy || translating || !selected) return;
+async function selectFile(selected) {
+  if (!ready || busy || translating || !selected) return;
   if (!/\.(mp3|mp4)$/i.test(selected.name) || !selected.size || selected.size > 4 * 1024 ** 3) {
     status('MP3または音声入りMP4（4GB以下）を選んでください。', true); return;
   }
   file = selected;
   $('file-name').textContent = selected.name;
   $('file-detail').textContent = `${(selected.size / 1024 ** 2).toFixed(1)} MB`;
-  status(''); buttons();
+  $('file').value = '';
+  await startTranscription();
 }
 $('file').addEventListener('change', e => selectFile(e.target.files[0]));
-for (const event of ['dragenter', 'dragover']) $('drop').addEventListener(event, e => { e.preventDefault(); if (!busy) $('drop').classList.add('drag'); });
+for (const event of ['dragenter', 'dragover']) $('drop').addEventListener(event, e => { e.preventDefault(); if (ready && !busy && !translating) $('drop').classList.add('drag'); });
 for (const event of ['dragleave', 'drop']) $('drop').addEventListener(event, e => { e.preventDefault(); $('drop').classList.remove('drag'); });
 $('drop').addEventListener('drop', e => selectFile(e.dataTransfer.files[0]));
 window.addEventListener('dragover', e => e.preventDefault());
@@ -67,8 +67,8 @@ async function poll(restoreTranslation = false) {
     if (busy) pollTimer = setTimeout(poll, 3000);
   }
 }
-$('start').addEventListener('click', async () => {
-  if (busy || translating || !file) return;
+async function startTranscription() {
+  if (!ready || !token || busy || translating || !file) return;
   $('japanese').value = ''; translatedSource = ''; translationStatus('');
   busy = true; lastState = 'uploading'; segments = []; $('result').value = ''; buttons();
   status('読み込み中…');
@@ -77,9 +77,9 @@ $('start').addEventListener('click', async () => {
     const response = await fetch('/api/transcribe', {method: 'POST', headers: {'X-App-Token': token, 'X-Model': $('model').value, 'Content-Type': 'application/octet-stream'}, body: file});
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || '開始できませんでした。');
-    clearTimeout(pollTimer); poll();
-  } catch (error) { busy = false; status(error.message, true); buttons(); }
-});
+    clearTimeout(pollTimer); await poll();
+  } catch (error) { busy = false; $('progress-wrap').hidden = true; status(error.message, true); buttons(); }
+}
 $('cancel').addEventListener('click', async () => {
   try {
     const response = await fetch('/api/cancel', {method: 'POST', headers: {'X-App-Token': token}});
@@ -104,7 +104,7 @@ function stamp(seconds) {
 }
 $('srt').addEventListener('click', () => download(segments.map((s, i) => `${i + 1}\n${stamp(s.start)} --> ${stamp(s.end)}\n${s.text}\n`).join('\n'), 'srt'));
 (async () => {
-  try { const response = await fetch('/api/session'); if (!response.ok) throw new Error(); token = (await response.json()).token; await poll(true); if (lastState !== 'done' && !busy) await pollTranslation(true); buttons(); }
+  try { const response = await fetch('/api/session'); if (!response.ok) throw new Error(); token = (await response.json()).token; await poll(true); if (lastState !== 'done' && !busy) await pollTranslation(true); ready = true; buttons(); }
   catch { status('start.commandからアプリを起動してください。', true); }
 })();
 

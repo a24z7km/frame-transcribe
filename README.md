@@ -27,11 +27,10 @@ cd frame-transcribe
 
 ## 使い方
 
-1. Applicationsの「Frame 文字起こし」を開くと、ブラウザ画面が表示されます。
-2. 英語のMP3または音声入りMP4（最大4GB）を選択・ドロップします。
-3. 標準（Tiny English）または高精度（Base English）を選んで開始します。
-4. 文字起こしが完了すると、自動で日本語訳まで進みます。ブラウザを閉じても処理は続きます。
-5. 英語・日本語を編集・コピーし、TXT／SRT／`.ja.txt`を保存できます。英文を直した場合は「再翻訳」で訳を更新します。
+1. Applicationsの「Frame 文字起こし」を開きます。
+2. 必要に応じて認識精度を選びます（既定は標準）。
+3. 英語のMP3または音声入りMP4（最大4GB）を選択・ドロップすると、文字起こしから日本語訳まで自動で進みます。開始操作は不要です。ブラウザを閉じても処理は続きます。
+4. 英語・日本語を編集・コピーし、TXT／SRT／`.ja.txt`を保存できます。英文を直した場合は「再翻訳」で訳を更新します。
 
 Apple翻訳の初回画面で、英語と日本語のモデルを準備してください。ダウンロード完了をアプリが待ってから翻訳します。「翻訳モデルを準備」で先に準備することもできます。
 
@@ -56,6 +55,7 @@ Apple翻訳の初回画面で、英語と日本語のモデルを準備してく
 ```sh
 .venv/bin/python -m unittest discover -s tests -v
 node tests/translation-ui.cjs
+node tests/auto-start-ui.cjs
 zsh native/build.sh
 zsh native/build-launcher.sh
 ```
