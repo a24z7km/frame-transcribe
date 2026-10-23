@@ -22,7 +22,7 @@ def install(source, target, identifier):
     if identifier == 'local.frame.desktop-launcher':
         info['CFBundleURLTypes'] = [{'CFBundleURLName':'local.frame.launch','CFBundleTypeRole':'Viewer','CFBundleURLSchemes':['frame-transcribe']}]
     info_path.write_bytes(plistlib.dumps(info))
-    subprocess.run(['xattr','-d','com.apple.FinderInfo',str(target)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+    subprocess.run(['xattr','-cr',str(target)],check=True)
     subprocess.run(['codesign','--force','--sign','-',str(target)],check=True)
     subprocess.run(['/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister','-f',str(target)],check=True)
     print('Installed:', target)

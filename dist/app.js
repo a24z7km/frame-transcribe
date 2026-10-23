@@ -21,7 +21,7 @@ function buttons() {
   $('txt').disabled = empty;
   $('srt').disabled = !segments.length || busy;
   const words = $('result').value.trim().match(/\S+/g) || [];
-  $('word-count').textContent = `${words.length.toLocaleString()} WORDS`;
+  $('word-count').textContent = words.length ? `${words.length.toLocaleString()}語` : '';
 }
 function selectFile(selected) {
   if (busy || translating || !selected) return;
@@ -30,8 +30,8 @@ function selectFile(selected) {
   }
   file = selected;
   $('file-name').textContent = selected.name;
-  $('file-detail').textContent = `${(selected.size / 1024 ** 2).toFixed(1)} MB · English`;
-  status('準備ができました。「文字起こしを開始」を押してください。'); buttons();
+  $('file-detail').textContent = `${(selected.size / 1024 ** 2).toFixed(1)} MB`;
+  status(''); buttons();
 }
 $('file').addEventListener('change', e => selectFile(e.target.files[0]));
 for (const event of ['dragenter', 'dragover']) $('drop').addEventListener(event, e => { e.preventDefault(); if (!busy) $('drop').classList.add('drag'); });
@@ -40,7 +40,7 @@ $('drop').addEventListener('drop', e => selectFile(e.dataTransfer.files[0]));
 window.addEventListener('dragover', e => e.preventDefault());
 window.addEventListener('drop', e => e.preventDefault());
 $('result').addEventListener('input', () => {
-  if (translatedSource && translatedSource !== $('result').value.trim()) translationStatus('英文が変更されています。必要に応じて翻訳し直してください。');
+  if (translatedSource && translatedSource !== $('result').value.trim()) translationStatus('原文を変更しました');
   buttons();
 });
 $('japanese').addEventListener('input', buttons);
@@ -53,9 +53,10 @@ async function poll() {
     busy = !!job.running;
     if (job.segments) segments = job.segments;
     if (typeof job.text === 'string' && job.state !== 'idle') $('result').value = job.text;
-    $('progress-wrap').hidden = job.state === 'idle';
+    $('progress-wrap').hidden = !busy;
     $('bar').style.width = `${job.progress || 0}%`;
-    if (job.message) status(job.state === 'transcribing' ? `${job.message} · ${job.progress || 0}%` : job.message, job.state === 'error');
+    if (job.state === 'error') status(job.message || '処理できませんでした', true);
+    else status(busy ? (job.state === 'transcribing' ? `${job.progress || 0}%` : '準備中…') : '');
     if (job.state === 'cancelled') status(busy ? '停止しています…' : '中止しました。途中までの結果は保存できます。');
     buttons();
     if (busy) pollTimer = setTimeout(poll, 1200);
@@ -66,10 +67,9 @@ async function poll() {
 }
 $('start').addEventListener('click', async () => {
   if (busy || translating || !file) return;
-  if ($('result').value.trim() && !confirm('現在の結果を新しい文字起こしで置き換えます。必要な結果は保存しましたか？')) return;
   $('japanese').value = ''; translatedSource = ''; translationStatus('');
   busy = true; lastState = 'uploading'; segments = []; $('result').value = ''; buttons();
-  status('音声ファイルをこのMacの処理エンジンに読み込んでいます…');
+  status('読み込み中…');
   $('progress-wrap').hidden = false; $('bar').style.width = '0%';
   try {
     const response = await fetch('/api/transcribe', {method: 'POST', headers: {'X-App-Token': token, 'X-Model': $('model').value, 'Content-Type': 'application/octet-stream'}, body: file});
@@ -101,7 +101,6 @@ function stamp(seconds) {
   return `${String(Math.floor(ms / 3600000)).padStart(2,'0')}:${String(Math.floor(ms / 60000) % 60).padStart(2,'0')}:${String(Math.floor(ms / 1000) % 60).padStart(2,'0')},${String(ms % 1000).padStart(3,'0')}`;
 }
 $('srt').addEventListener('click', () => download(segments.map((s, i) => `${i + 1}\n${stamp(s.start)} --> ${stamp(s.end)}\n${s.text}\n`).join('\n'), 'srt'));
-window.addEventListener('beforeunload', e => { if (busy || translating || $('result').value.trim() || $('japanese').value.trim()) { e.preventDefault(); e.returnValue = ''; } });
 (async () => {
   try { const response = await fetch('/api/session'); if (!response.ok) throw new Error(); token = (await response.json()).token; await poll(); await pollTranslation(true); buttons(); }
   catch { status('start.commandからアプリを起動してください。', true); }
@@ -121,8 +120,7 @@ async function pollTranslation(restore = false) {
     if (!job.prepareOnly && typeof job.text === 'string' && job.state !== 'idle') $('japanese').value = job.text;
     if (job.state === 'done' && !job.running && !job.prepareOnly) translatedSource = job.source;
     if (job.state !== 'idle') {
-      let message = job.message || 'Mac内で日本語に翻訳しています';
-      if (job.state === 'translating' && job.total) message += ` · ${job.completed || 0} / ${job.total}`;
+      let message = job.state === 'error' ? job.message : (job.running ? (job.state === 'translating' && job.total ? `${job.completed || 0} / ${job.total}` : '準備中…') : '');
       translationStatus(message, job.state === 'error');
     }
     buttons();
@@ -136,9 +134,8 @@ async function beginTranslation(prepare = false) {
   if (busy || translating) return;
   const source = $('result').value.trim();
   if (!prepare && !source) return;
-  if (!prepare && $('japanese').value.trim() && !confirm('現在の日本語訳を置き換えます。必要な訳文は保存しましたか？')) return;
   translating = true; buttons();
-  translationStatus('Apple翻訳を準備しています…');
+  translationStatus('準備中…');
   try {
     const response = await fetch(prepare ? '/api/translation/prepare' : '/api/translate', {method: 'POST', headers: {'X-App-Token': token, 'Content-Type': 'application/json'}, body: JSON.stringify({text: source})});
     const data = await response.json();

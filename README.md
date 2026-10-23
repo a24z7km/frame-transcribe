@@ -6,6 +6,8 @@
 
 ライブ字幕は別アプリの **[Frame Live](https://github.com/a24z7km/frame-live)** で提供します。このリポジトリだけでFrame文字起こしをセットアップできます。
 
+![文字起こしと日本語訳の画面](docs/workspace.png)
+
 ## 動作環境・セットアップ
 
 - Apple Silicon Mac、macOS 15以降（Intel Macは未検証）。
@@ -27,9 +29,9 @@ cd frame-transcribe
 
 1. Applicationsの「Frame 文字起こし」を開くと、ブラウザ画面が表示されます。
 2. 英語のMP3または音声入りMP4（最大4GB）を選択・ドロップします。
-3. Tiny English（軽さ優先）またはBase English（精度優先）を選んで開始します。
+3. 標準（Tiny English）または高精度（Base English）を選んで開始します。
 4. 結果を編集・コピーし、TXTやSRTを保存します。
-5. 「日本語に翻訳」で日本語訳を作成し、編集・コピー・`.ja.txt`保存できます。
+5. 「翻訳」で日本語訳を作成し、編集・コピー・`.ja.txt`保存できます。
 
 Apple翻訳の初回画面で、英語と日本語のモデルを準備してください。ダウンロード完了をアプリが待ってから翻訳します。「翻訳モデルを準備」で先に準備することもできます。
 
