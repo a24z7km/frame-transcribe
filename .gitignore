@@ -1,0 +1,28 @@
+.venv/
+.models/
+__pycache__/
+.DS_Store
+
+.runtime/
+.runtime-set-frame-icons
+
+# Local builds and machine-specific bundle metadata
+native/*.app/
+native/icons/*.iconset/
+native/icons/installed-preview.png
+/*.png
+*.pyc
+*.dSYM/
+
+# Credentials, recordings, and personal exports
+.env
+.env.*
+*.log
+*.mp3
+*.mp4
+*.m4a
+*.wav
+*.aiff
+*.flac
+*.srt
+*.ja.txt
