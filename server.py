@@ -51,6 +51,9 @@ def run_job(path, model):
         Path(path).unlink(missing_ok=True)
         with LOCK:
             PROCESS = None
+            text = JOB.get('text', '').strip()
+            if JOB.get('state') == 'done' and text:
+                TRANSLATION.start_automatic(text)
             JOB['running'] = False
 
 class Handler(BaseHTTPRequestHandler):
@@ -120,6 +123,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(408, {'error': '翻訳データの読み込みに失敗しました。'})
         if path == '/api/cancel':
             with LOCK:
+                TRANSLATION.cancel()
                 JOB['state'] = 'cancelled'
                 if PROCESS and PROCESS.poll() is None:
                     try:

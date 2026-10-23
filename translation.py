@@ -63,6 +63,15 @@ class TranslationManager:
             self.job = {'state': 'preparing', 'running': True, 'text': '', 'source': '' if prepare else text.strip(), 'prepareOnly': prepare, 'progress': 0, 'completed': 0, 'total': len(chunks), 'message': 'Apple翻訳を起動しています。初回は別ウィンドウで言語モデルを準備します。'}
         threading.Thread(target=self._run, args=(chunks,), daemon=True).start()
 
+    def start_automatic(self, text):
+        """Keep the English result available even if translation cannot start."""
+        try:
+            self.start(text)
+        except (TranslationError, ValueError, OSError) as error:
+            with self.lock:
+                self.job = {'state': 'error', 'running': False, 'text': '',
+                            'source': text, 'message': str(error)}
+
     def cancel(self):
         with self.lock:
             if not self.job.get('running'):

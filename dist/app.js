@@ -12,6 +12,7 @@ function buttons() {
   $('result').readOnly = busy || translating;
   $('japanese').readOnly = translating;
   $('translate').disabled = busy || translating || !token || !$('result').value.trim();
+  $('translate').textContent = $('japanese').value.trim() ? '再翻訳' : '翻訳';
   $('prepare-translation').disabled = busy || translating || !token;
   $('cancel-translation').hidden = !translating;
   $('copy-ja').disabled = !$('japanese').value.trim();
@@ -44,7 +45,7 @@ $('result').addEventListener('input', () => {
   buttons();
 });
 $('japanese').addEventListener('input', buttons);
-async function poll() {
+async function poll(restoreTranslation = false) {
   try {
     const response = await fetch('/api/status');
     if (!response.ok) throw new Error();
@@ -59,6 +60,7 @@ async function poll() {
     else status(busy ? (job.state === 'transcribing' ? `${job.progress || 0}%` : '準備中…') : '');
     if (job.state === 'cancelled') status(busy ? '停止しています…' : '中止しました。途中までの結果は保存できます。');
     buttons();
+    if (!busy && job.state === 'done') await pollTranslation(restoreTranslation);
     if (busy) pollTimer = setTimeout(poll, 1200);
   } catch {
     status('アプリとの接続が切れました。起動用ファイルを確認してください。', true);
@@ -102,7 +104,7 @@ function stamp(seconds) {
 }
 $('srt').addEventListener('click', () => download(segments.map((s, i) => `${i + 1}\n${stamp(s.start)} --> ${stamp(s.end)}\n${s.text}\n`).join('\n'), 'srt'));
 (async () => {
-  try { const response = await fetch('/api/session'); if (!response.ok) throw new Error(); token = (await response.json()).token; await poll(); await pollTranslation(true); buttons(); }
+  try { const response = await fetch('/api/session'); if (!response.ok) throw new Error(); token = (await response.json()).token; await poll(true); if (lastState !== 'done' && !busy) await pollTranslation(true); buttons(); }
   catch { status('start.commandからアプリを起動してください。', true); }
 })();
 

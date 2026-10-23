@@ -1,13 +1,14 @@
 const fs = require('fs'), vm = require('vm'), assert = require('assert');
 const nodes = new Map(), calls = [], files = [];
 let job = {state:'idle',running:false,text:''};
+let transcription = {state:'idle'};
 const get = id => {
   if (!nodes.has(id)) nodes.set(id, {value:'',textContent:'',style:{},events:{},classList:{toggle(){},add(){},remove(){}},addEventListener(event,fn){this.events[event]=fn;}});
   return nodes.get(id);
 };
 const context = vm.createContext({Blob,URL:{createObjectURL(blob){files.push(blob);return 'blob:test'},revokeObjectURL(){}},setTimeout,clearTimeout,confirm:()=>true,document:{getElementById:get,createElement(){return {click(){}}}},window:{addEventListener(){}},fetch:async(url, options)=>{
   if(url==='/api/session') return {ok:true,json:async()=>({token:'test-token'})};
-  if(url==='/api/status') return {ok:true,json:async()=>({state:'idle'})};
+  if(url==='/api/status') return {ok:true,json:async()=>transcription};
   if(url==='/api/translation') return {ok:true,json:async()=>job};
   calls.push({url,payload:JSON.parse(options.body)});
   job={state:'done',running:false,text:'会議は明日の朝９時に始まります。',source:JSON.parse(options.body).text,message:'日本語への翻訳が完了しました。'};
@@ -30,5 +31,16 @@ vm.runInContext(fs.readFileSync('dist/app.js','utf8'),context);
  job={state:'done',running:false,prepareOnly:true,text:'',message:'準備完了'};
  await vm.runInContext('pollTranslation()',context);
  assert.equal(get('japanese').value,'編集した日本語訳','model preparation preserves existing translation');
+ transcription={state:'done',running:false,text:'A new recording.',segments:[]};
+ job={state:'done',running:false,source:'A new recording.',text:'新しい録音です。'};
+ await vm.runInContext('poll()',context);
+ assert.equal(get('result').value,'A new recording.');
+ assert.equal(get('japanese').value,'新しい録音です。','automatic translation is displayed after transcription');
+ assert.equal(get('translate').textContent,'再翻訳');
+ await vm.runInContext('poll()',context);
+ assert.equal(calls.length,1,'polling completion does not submit duplicate translations');
+ job={state:'done',running:false,source:'Edited English.',text:'編集後の英文の訳です。'};
+ await vm.runInContext('poll(true)',context);
+ assert.equal(get('result').value,'Edited English.','reload restores the English used for a manual retranslation');
  console.log('PASS: 30k+ English text in one click, original preserved, Japanese export, prepare preserves translation');
 })().catch(error=>{console.error(error);process.exitCode=1});
